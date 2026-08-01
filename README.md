@@ -2,6 +2,16 @@
 
 A personal lab for making games with AI. Two tracks, one rule set.
 
+## What the lab is
+
+A **read-only workshop**. The lab holds the production-track starter (the single
+source of truth), governance, skills, and templates. Games are **spawned as
+brand-new sibling projects** — the lab's own codebase is never edited by a game.
+
+```bash
+npm run new-game -- asteroids   # -> ../asteroids (own repo, own codebase)
+```
+
 ## The rule set (from the blueprint)
 
 1. **You are the architect; the AI is the typist.** Specs, boundaries, taste,
@@ -20,11 +30,15 @@ and `../ArcadeDemosceneTest/docs/r_aigamedev_COMPENDIUM.md`.
 | Track | Path | Stack | Use for |
 | --- | --- | --- | --- |
 | Sandbox | `games/sandbox-template/` | Single-file HTML + LittleJS | Prototypes, jams, tiny games — whole game fits in one context |
-| Production | this app (`src/`) | Vite + TypeScript + PixiJS v8 + bitECS | Anything that ships |
+| Production | spawned sibling projects | Vite + TypeScript + PixiJS v8 + bitECS | Anything that ships |
 
-## Production track (this app)
+## Production track
 
-A runnable starter demonstrating the lab's core patterns:
+`npm run new-game -- <name>` copies the starter + governance brain into a new
+sibling repo (`../<name>`), rewrites the package name, and `git init`s it. That
+project is where the game is built — never in the lab.
+
+The starter demonstrates the lab's core patterns:
 
 - **Fixed logical 1280 × 720 display** that contains-scales to any window
   (`src/core/Viewport.ts`, `renderer.screen` CSS-px math).
@@ -46,6 +60,7 @@ npm run dev        # http://localhost:5173
 npm run test       # determinism test for the state core
 npm run build      # typecheck + production build
 npm run verify     # headless smoke test (needs dev server + Edge on :9222)
+npm run new-game -- <name>   # spawn a new game project as a sibling repo
 ```
 
 ## Layout

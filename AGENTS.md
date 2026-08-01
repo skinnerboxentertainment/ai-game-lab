@@ -51,6 +51,7 @@ Never silently undo or re-derive a decision recorded below — re-read, then ask
 | `npm run test` | Node determinism test for the pure state core |
 | `npm run build` | `tsc --noEmit` + `vite build` |
 | `npm run verify` | Headless smoke test (CDP screenshot sampling) |
+| `npm run new-game -- <name>` | Spawn a brand-new production-track game project as a sibling repo (never edits the lab) |
 | `npm run preview` | Serve the production build |
 
 ## Live rules (update when the model fumbles)
@@ -103,4 +104,5 @@ contain-scale math, and that particles actually render (screenshot sampling).
 - `skills/` — reusable instruction packs (`verify`, `add-sprite`, `balance`).
 - `templates/` — prompt/spec/spritesheet templates for new games.
 - `games/` — one folder (or one HTML file) per game. Sandbox track uses LittleJS
-  single-file (`games/sandbox-template`); production track uses this app.
+  single-file (`games/sandbox-template`); production track spawns **sibling
+  projects** via `npm run new-game -- <name>` (never edits the lab).

@@ -36,12 +36,14 @@ in `production/events.md`; durable decisions in `docs/architecture/adr/`.
 
 ## Open questions / next steps
 
-- [ ] Add a second demo or a jam-scoped mini-game to exercise the pipeline.
-- [ ] Wire CI (GitHub Actions: typecheck + test + build on push).
+- [ ] Wire CI (GitHub Actions: typecheck + test + build on push) — for the lab and spawned projects.
 - [ ] Add an art pipeline example (green-screen → snapper → Aseprite) to skills/.
+- [x] First game: Asteroids — spawned to `../asteroids` (sibling repo, own codebase).
 
 ## Handoff note (most recent session)
 
-Scaffolded the lab from the blueprint: skeleton, governance, production starter,
-determinism test, verify harness, and sandbox template. All verified green
-(typecheck, build, test, headless verify).
+Reorganized the lab into a **read-only workshop**: `npm run new-game -- <name>`
+spawns a brand-new production-track project as a sibling repo (own git,
+package.json, src/, tests/, verify). Asteroids spawned to
+`C:\Users\oscar\AI WORKBENCH\asteroids`, demo spec moved in. The lab's own
+codebase is never edited by a game.

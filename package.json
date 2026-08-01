@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types tests/state.test.ts",
     "verify": "node scripts/verify.mjs",
+    "new-game": "node scripts/new-game.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

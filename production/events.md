@@ -7,4 +7,11 @@
 - Adopted the Consort Model + project brain (active.md / events.md / ADRs) from the AutoMagically repo (MIT).
 - Distilled AutoMagically's 56-chunk knowledge base into docs/packs/: state-authority, pixijs-lab, qa-evidence.
 - Git checkpoint: initialized repo, initial commit of the lab scaffold (see ADR-0001).
+- **Workshop reorg (Option A):** lab is now a read-only workshop. Added
+  `scripts/new-game.mjs` + `npm run new-game -- <name>` which spawns a brand-new
+  production-track project as a sibling repo (own git, package.json, src, tests,
+  verify, governance brain). Lab gates green (test 5/5, typecheck, build).
+- **First spawned game: Asteroids** at `C:\Users\oscar\AI WORKBENCH\asteroids`
+  (git init'd, npm install'd, gates green). Demo spec moved from the lab to
+  `asteroids/docs/SPEC.md`; the game's 7-beat rhythm continues there.
 

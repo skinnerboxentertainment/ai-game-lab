@@ -13,14 +13,23 @@ entire game in context, iterate on one file, and the diff is always visible."
 
 ## Production track (anything that ships)
 
-This app (`src/`) — Vite + TypeScript + PixiJS v8 + bitECS. Copy a game folder
-pattern, wire it into `src/main.ts` as a scene, and keep the lab rules
-(deterministic core, fixed timestep, verify harness, green gates).
+Games are **spawned as brand-new sibling projects** — never built in the lab.
+
+```bash
+npm run new-game -- <name>
+# -> ../<name>   (own repo, own package.json, own src/tests/verify)
+```
+
+The lab is a read-only workshop: it holds the starter (single source of truth),
+governance, skills, templates, and the verify harness. Each spawned project gets
+its own git repo and codebase.
 
 ## To add a game
 
-1. Write `docs/SPEC.md` first (feel-first, scope to a vertical slice).
+1. Write `docs/SPEC.md` first (feel-first, scope to a vertical slice) — in the
+   spawned project, or draft it in the lab and move it across.
 2. Sandbox: copy `sandbox-template/` → `games/<name>/index.html`.
-   Production: add `src/scenes/<Name>.ts` + swap in `main.ts`.
+   Production: `npm run new-game -- <name>` (from the lab), then work in the
+   spawned project.
 3. Extend `scripts/verify.mjs` with a pixel sample of the new game's content.
 4. `npm run test && npm run typecheck && npm run build && npm run verify`.
