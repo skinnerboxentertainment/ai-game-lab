@@ -14,4 +14,24 @@
 - **First spawned game: Asteroids** at `C:\Users\oscar\AI WORKBENCH\asteroids`
   (git init'd, npm install'd, gates green). Demo spec moved from the lab to
   `asteroids/docs/SPEC.md`; the game's 7-beat rhythm continues there.
+- **Lab hardening (external audit, 10 findings, all verified):**
+  - Sandbox template fixed: `gameInit() {` syntax error + `engineInit()` called
+    with no callbacks + `new Particle(...)` misuse → proper function
+    declarations, `engineInit(gameInit, gameUpdate, gameUpdatePost)`, and a
+    real `ParticleEmitter` burst.
+  - `new-game.mjs` rewritten: game-specific `AGENTS.md` template (no lab-workshop
+    wording, no `new-game` command), only `scripts/verify.mjs` copied (generator
+    no longer leaks into games), transactional stage→rename (no partial dirs),
+    both `--out DIR` and `--out=DIR` forms.
+  - Lab `AGENTS.md` made self-contained (removed `../ArcadeDemosceneTest`
+    hard dependency); README updated to match.
+  - Added `lint` (`node --check` on scripts + sandbox inline script) and the
+    one-command `npm run check` gate.
+  - Viewport letterbox now `clear()`s before redraw (no geometry accumulation).
+  - New tests: `tests/sandbox.test.ts` (template validity) and
+    `tests/harness.test.ts` (containScale, accumulator, ECS/core equivalence,
+    generator output). Added `@types/node` + `src/core/containScale.ts` +
+    `src/core/fixedstep.ts`.
+  - Reconciled `production/active.md` + `docs/handoff.md` drift.
+  - Gate green: test 21/21, typecheck, build, lint, headless verify 7/7.
 

@@ -8,9 +8,11 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types tests/state.test.ts",
+    "test": "node --experimental-strip-types tests/state.test.ts && node --experimental-strip-types tests/sandbox.test.ts && node --experimental-strip-types tests/harness.test.ts",
+    "lint": "node scripts/lint.mjs",
     "verify": "node scripts/verify.mjs",
     "new-game": "node scripts/new-game.mjs",
+    "check": "npm run test && npm run typecheck && npm run build && npm run lint",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -18,6 +20,7 @@
     "pixi.js": "^8.6.0"
   },
   "devDependencies": {
+    "@types/node": "^26.1.2",
     "typescript": "^5.6.0",
     "vite": "^6.0.0"
   }

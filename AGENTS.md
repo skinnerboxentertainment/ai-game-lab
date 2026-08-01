@@ -1,12 +1,25 @@
 # AGENTS.md — AI Game-Making Lab
 
-The lab is a sandbox for making games with AI, following the operating rules in
-`../ArcadeDemosceneTest/docs/AI_GAME_LAB_BLUEPRINT.md` (knowledge base:
-`../ArcadeDemosceneTest/docs/r_aigamedev_COMPENDIUM.md`).
+You are the sole engineer on the **AI Game-Making Lab**, a read-only workshop
+for making games with AI. This file is self-contained: every rule that governs
+your work here is below. External reference docs are optional reading, never a
+hard dependency.
+
+## What the lab is
+
+The lab holds the production-track starter (the single source of truth), the
+governance brain, knowledge packs, skills, and templates. Games are **spawned
+as brand-new sibling projects** — the lab's own codebase is never edited by a
+game.
+
+- `npm run new-game -- <name>` creates `../<name>` (own git repo, own
+  `package.json`, own `src/`/`tests`/`verify`). Work on a game happens **in that
+  spawned project**, never in the lab.
+- The lab itself stays pristine and green at all times.
 
 ## Operating model (the consort)
 
-Two actors, three tiers — see `docs/CONSORT_MODEL.md` for the full model.
+Two actors, three tiers:
 
 - **Orchestrator** (human/lead): architecture, workflow, integration, final
   review, decision log.
@@ -25,34 +38,6 @@ Two actors, three tiers — see `docs/CONSORT_MODEL.md` for the full model.
   Read this first in every session.
 - `production/events.md` — chronological log; append at each Prove.
 - `docs/architecture/adr/` — numbered ADRs with validation criteria.
-
-## Knowledge packs (docs/packs/)
-
-Loaded by path trigger, never automatically. When touching a matching path,
-suggest the pack and ask before loading:
-
-| Pack | Load when touching |
-| --- | --- |
-| `state-authority-pack.md` | `src/state/**`, `src/ecs/**`, `src/scenes/**`, save/authority |
-| `pixijs-lab-pack.md` | any render/input/asset/audio work |
-| `qa-evidence-pack.md` | any story completion / refactor / bug fix |
-
-## Identity
-
-You are the sole engineer on this project. You have read this file every session.
-Never silently undo or re-derive a decision recorded below — re-read, then ask.
-
-## Commands
-
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Vite dev server (http://localhost:5173) |
-| `npm run typecheck` | Strict `tsc --noEmit` |
-| `npm run test` | Node determinism test for the pure state core |
-| `npm run build` | `tsc --noEmit` + `vite build` |
-| `npm run verify` | Headless smoke test (CDP screenshot sampling) |
-| `npm run new-game -- <name>` | Spawn a brand-new production-track game project as a sibling repo (never edits the lab) |
-| `npm run preview` | Serve the production build |
 
 ## Live rules (update when the model fumbles)
 
@@ -74,16 +59,34 @@ Never silently undo or re-derive a decision recorded below — re-read, then ask
 - [ ] Never touch files outside your stated ownership list.
 - [ ] Describe feelings, not just mechanics, in specs.
 
-## Architecture
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Vite dev server (http://localhost:5173) |
+| `npm run typecheck` | Strict `tsc --noEmit` |
+| `npm run test` | Node determinism tests for the pure state core |
+| `npm run build` | `tsc --noEmit` + `vite build` |
+| `npm run verify` | Headless smoke test (CDP screenshot sampling) |
+| `npm run new-game -- <name>` | Spawn a brand-new production-track game project as a sibling repo (never edits the lab) |
+| `npm run lint` | Static check of scripts (currently `node --check` on `scripts/*.mjs`) |
+| `npm run check` | One-command gate: `test && typecheck && build && lint` |
+| `npm run preview` | Serve the production build |
+
+## Architecture (this repo)
 
 - `src/state/core.ts` — **pure deterministic core** (seeded RNG, particle sim).
   No Pixi/bitECS imports; unit-tested in Node (`tests/state.test.ts`).
 - `src/ecs/world.ts` — bitECS component/entity layer that drives the pure core.
 - `src/scenes/ParticleGalaxy.ts` — demo scene: fixed-timestep ECS sim rendered
   by PixiJS sprites.
-- `src/core/*` — Application + Viewport (proven pattern, see the Arcade demo).
+- `src/core/*` — Application + Viewport (proven pattern).
 - Layer order (fixed): `backgroundLayer` → `effectsLayer` → `sceneLayer` →
   `uiLayer`. Sim logic never lives in render code.
+
+Note: the starter's particle sim is a *minimal* example of the pure-core
+pattern. The full serializable `GameState` + action-transition architecture is
+demonstrated in the spawned game projects (e.g. the Asteroids game).
 
 ## Headless verification (no human eyes)
 
@@ -97,12 +100,28 @@ headless.** Use screenshot sampling:
 3. `node scripts/verify.mjs`
 
 `scripts/verify.mjs` checks boot (`window.__demo`), 1280×720 logical display,
-contain-scale math, and that particles actually render (screenshot sampling).
+contain-scale math, and that content actually renders (screenshot sampling).
+
+## Knowledge packs (docs/packs/)
+
+Loaded by path trigger, never automatically. When touching a matching path,
+suggest the pack and ask before loading:
+
+| Pack | Load when touching |
+| --- | --- |
+| `state-authority-pack.md` | `src/state/**`, `src/ecs/**`, `src/scenes/**`, save/authority |
+| `pixijs-lab-pack.md` | any render/input/asset/audio work |
+| `qa-evidence-pack.md` | any story completion / refactor / bug fix |
 
 ## Skills & templates
 
 - `skills/` — reusable instruction packs (`verify`, `add-sprite`, `balance`).
 - `templates/` — prompt/spec/spritesheet templates for new games.
-- `games/` — one folder (or one HTML file) per game. Sandbox track uses LittleJS
-  single-file (`games/sandbox-template`); production track spawns **sibling
-  projects** via `npm run new-game -- <name>` (never edits the lab).
+- `games/` — sandbox track uses LittleJS single-file (`games/sandbox-template`);
+  production track spawns sibling projects via `npm run new-game -- <name>`.
+
+## Sources (optional reading, not a dependency)
+
+The operating model was adapted from the MIT-licensed AutoMagically repo and a
+public AI-game-dev compendium; those sources live outside this repo and are not
+required to work here.

@@ -42,36 +42,60 @@
     }
   }
 
-  gameInit() {
+  // --- LittleJS callbacks (passed to engineInit below, per the engine API) ---
+
+  function gameInit() {
     for (let i = 0; i < COUNT; i++) new Ball();
   }
 
-  gameUpdate() {
+  function gameUpdate() {
     // Click: spawn a deterministic particle burst + a sound.
     if (mouseWasPressed(0)) {
-      for (let i = 0; i < 12; i++) {
-        new Particle(
-          mousePos, rand() * 2 * PI, rand() * 200,
-          0.6, this.color = new Color(1, rand(), rand(), 1)
-        );
-      }
+      new ParticleEmitter(
+        mousePos,                     // pos
+        0,                            // angle
+        10,                           // emitSize (circle diameter)
+        0.3,                          // emitTime (seconds the emitter lives)
+        120,                          // emitRate (particles per second)
+        PI,                           // emitConeAngle
+        undefined,                    // tileInfo (untextured)
+        new Color(1, rand(), rand(), 1), // colorStartA
+        new Color(rand(), 1, rand(), 1), // colorStartB
+        new Color(1, 1, 1, 0),        // colorEndA
+        new Color(1, 1, 1, 0),        // colorEndB
+        0.6,                          // particleTime
+        3,                            // sizeStart
+        7,                            // sizeEnd
+        0.15,                         // speed (world units per frame @60fps)
+        0.05,                         // angleSpeed
+        0.95,                         // damping
+        1,                            // angleDamping
+        0,                            // gravityScale
+        PI,                           // particleConeAngle
+        0.2,                          // fadeRate
+        0.3,                          // randomness
+        false,                        // collideTiles
+        true,                         // additive
+        true,                         // randomColorLinear
+      );
       playSound(new Sound([, , 500, , 0.1, 0.2, 1, 1.5, , 50]));
     }
   }
 
-  gameUpdatePost() {
+  function gameUpdatePost() {
     // Title + seed readout (determinism demo: ?seed= changes the layout).
-    drawText(
-      "AI GAME LAB — SANDBOX", vec2(4, 4), 24,
-      new Color(1, 1, 1), 0, 0, 1
+    drawTextScreen(
+      "AI GAME LAB — SANDBOX", vec2(10, 10), 24,
+      new Color(1, 1, 1), 0, new Color(0, 0, 0), "left"
     );
-    drawText(
-      "seed " + seed + " — click for sparks — drag to apply impulse",
-      vec2(4, 28), 14, new Color(0.7, 0.9, 0.7), 0, 0, 1
+    drawTextScreen(
+      "seed " + seed + " — click for sparks", vec2(10, 36), 14,
+      new Color(0.7, 0.9, 0.7), 0, new Color(0, 0, 0), "left"
     );
   }
 
-  engineInit();
+  // Start the engine with the game callbacks.
+  engineInit(gameInit, gameUpdate, gameUpdatePost);
   </script>
 </body>
 </html>

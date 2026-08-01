@@ -1,7 +1,7 @@
 import { addComponent, addEntity, createWorld, defineComponent, Types } from "bitecs";
 import type { IWorld } from "bitecs";
-import { stepParticle } from "../state/core";
-import type { Particle, SimBounds } from "../state/core";
+import { stepParticle } from "../state/core.ts";
+import type { Particle, SimBounds } from "../state/core.ts";
 // NOTE: bitecs pinned to 0.3.x API (defineComponent/Types). 0.4.0 is a full
 // rewrite; upgrade deliberately with tests once its API is proven.
 

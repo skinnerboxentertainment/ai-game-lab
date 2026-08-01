@@ -1,6 +1,7 @@
 import { Container, Graphics, Point } from "pixi.js";
 import type { Application } from "pixi.js";
 import { LOGICAL_WIDTH, LOGICAL_HEIGHT } from "../config/display";
+import { containScale } from "./containScale";
 import type { Disposable } from "./Disposable";
 
 export interface ViewportStats {
@@ -46,15 +47,15 @@ export class Viewport implements Disposable {
   private readStats(): ViewportStats {
     const w = this.app.renderer.screen.width;
     const h = this.app.renderer.screen.height;
-    const scale = Math.min(w / LOGICAL_WIDTH, h / LOGICAL_HEIGHT);
+    const cs = containScale(w, h, LOGICAL_WIDTH, LOGICAL_HEIGHT);
     return {
       logicalWidth: LOGICAL_WIDTH,
       logicalHeight: LOGICAL_HEIGHT,
       screenWidth: w,
       screenHeight: h,
-      scale,
-      offsetX: (w - LOGICAL_WIDTH * scale) / 2,
-      offsetY: (h - LOGICAL_HEIGHT * scale) / 2,
+      scale: cs.scale,
+      offsetX: cs.offsetX,
+      offsetY: cs.offsetY,
     };
   }
 
@@ -62,6 +63,8 @@ export class Viewport implements Disposable {
     const s = this.readStats();
     this.root.scale.set(s.scale);
     this.root.position.set(s.offsetX, s.offsetY);
+    // Clear before redraw so repeated resizes never accumulate geometry.
+    this.letterbox.clear();
     this.letterbox.rect(0, 0, s.screenWidth, s.screenHeight).fill({
       color: 0x000000,
       alpha: 0,

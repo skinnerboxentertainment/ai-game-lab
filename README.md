@@ -12,7 +12,7 @@ brand-new sibling projects** — the lab's own codebase is never edited by a gam
 npm run new-game -- asteroids   # -> ../asteroids (own repo, own codebase)
 ```
 
-## The rule set (from the blueprint)
+## The rule set
 
 1. **You are the architect; the AI is the typist.** Specs, boundaries, taste,
    and "when to rewrite" are yours.
@@ -22,8 +22,8 @@ npm run new-game -- asteroids   # -> ../asteroids (own repo, own codebase)
 4. **Human taste is the moat.** Agents can't judge aesthetics or fun.
 5. **Keep context small.** `AGENTS.md` + `docs/` + skills beat re-explaining.
 
-Full rationale + synthesis: `../ArcadeDemosceneTest/docs/AI_GAME_LAB_BLUEPRINT.md`
-and `../ArcadeDemosceneTest/docs/r_aigamedev_COMPENDIUM.md`.
+The full operating contract is self-contained in `AGENTS.md`; the knowledge
+packs in `docs/packs/` carry the deep, path-triggered detail.
 
 ## Two tracks
 

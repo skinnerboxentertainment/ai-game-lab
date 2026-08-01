@@ -3,6 +3,7 @@ import { LOGICAL_WIDTH, LOGICAL_HEIGHT } from "../config/display";
 import { seedParticles, TICK } from "../state/core";
 import type { SimBounds } from "../state/core";
 import { addParticle, createEcsWorld, Position, stepAll } from "../ecs/world";
+import { accumulate } from "../core/fixedstep";
 import type { IWorld } from "bitecs";
 import { hslToRgb, makeDotTexture } from "../utils/color";
 import type { Disposable } from "../core/Disposable";
@@ -55,12 +56,10 @@ export class ParticleGalaxy implements Disposable {
   }
 
   update(dt: number): void {
-    this.accumulator += dt;
-    let guard = 0;
-    while (this.accumulator >= TICK && guard < 8) {
+    const { steps, remainder } = accumulate(this.accumulator + dt, TICK, 8);
+    this.accumulator = remainder;
+    for (let i = 0; i < steps; i++) {
       this.step(TICK);
-      this.accumulator -= TICK;
-      guard++;
     }
   }
 
