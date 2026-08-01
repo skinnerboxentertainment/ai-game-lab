@@ -1,23 +1,25 @@
 # Active Session
 
 ## Current Beat
-Build | Prove
+Frame
 
 ## Current Objective
-Keep the production-track starter green while layering in the consort model +
-knowledge packs.
+First real game from spec: Asteroids. docs/SPEC-asteroids-demo.md written (goal, architecture
+fit, numbers, anti-goals, acceptance tests). Awaiting orchestrator approval of
+the changeset before Commit → Build → Prove.
 
 ## Active Packs
-- state-authority: state/render separation + determinism (the sim core)
-- pixijs-lab: PixiJS v8 API discipline (pin version, verify against reference)
-- qa-evidence: verification gate + evidence-by-story-type
+- qa-evidence: loaded at Frame to decide how the story gets tested before building
+- state-authority: (load at Commit/Build) state/render separation + determinism
+- pixijs-lab: (load at Commit/Build) PixiJS v8 API discipline
 
 ## Open Decisions
-- (none blocking)
+- ECS depth for game #1: follow established 3-layer (pure core + ECS + scene)
+  vs. pure-core-only render. Spec recommends the 3-layer pattern. Owner: lead.
 
 ## Next Action
-First real game from spec: pick a jam-scoped mechanic, write docs/SPEC.md, run
-the 7-beat rhythm through Commit, then Build + Prove.
+Orchestrator reviews docs/SPEC.md; approve or adjust, then Commit (decision
+record) and start Build.
 
 ## Blockers
 - None.
