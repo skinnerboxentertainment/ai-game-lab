@@ -112,10 +112,11 @@ suggest the pack and ask before loading:
 | `state-authority-pack.md` | `src/state/**`, `src/ecs/**`, `src/scenes/**`, save/authority |
 | `pixijs-lab-pack.md` | any render/input/asset/audio work |
 | `qa-evidence-pack.md` | any story completion / refactor / bug fix |
+| `kenney-assets` | any sprite/asset selection, game spec design, "what assets should I use" |
 
 ## Skills & templates
 
-- `skills/` — reusable instruction packs (`verify`, `add-sprite`, `balance`).
+- `skills/` — reusable instruction packs (`verify`, `add-sprite`, `balance`, `kenney-assets`).
 - `templates/` — prompt/spec/spritesheet templates for new games.
 - `games/` — sandbox track uses LittleJS single-file (`games/sandbox-template`);
   production track spawns sibling projects via `npm run new-game -- <name>`.
