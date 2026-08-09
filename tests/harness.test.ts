@@ -4,7 +4,7 @@
  * Covers findings #7 (coverage gaps): viewport math, accumulator, ECS/core
  * equivalence, and scaffold generator output.
  */
-import { mkdtempSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
@@ -133,6 +133,24 @@ function check(name: string, ok: boolean, detail?: string): void {
     check(
       "generated project has verify.mjs",
       existsSync(join(gameDir, "scripts", "verify.mjs")),
+    );
+    check(
+      "generated scripts dir has only verify.mjs",
+      JSON.stringify(readdirSync(join(gameDir, "scripts")).sort()) ===
+        JSON.stringify(["verify.mjs"]),
+    );
+
+    const testScript = pkg.scripts?.test ?? "";
+    check(
+      "generated test script runs only existing tests",
+      testScript === "node --experimental-strip-types tests/state.test.ts" &&
+        existsSync(join(gameDir, "tests", "state.test.ts")) &&
+        !readdirSync(join(gameDir, "tests")).some((f) => f !== "state.test.ts"),
+      testScript,
+    );
+    check(
+      "generated project has no lab-only lint/check scripts",
+      !pkg.scripts?.lint && !pkg.scripts?.check,
     );
   }
 }

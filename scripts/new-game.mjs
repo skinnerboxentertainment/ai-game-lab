@@ -92,12 +92,20 @@ function buildProject(dest) {
   // itself is lab-only and must NOT leak into generated projects.
   const copyDirs = [
     ["src", "src"],
-    ["tests", "tests"],
     ["scripts/verify.mjs", "scripts/verify.mjs"],
   ];
   for (const [src, out] of copyDirs) {
     cpSync(join(LAB_ROOT, src), join(dest, out), { recursive: true });
     log(`copied ${out}`);
+  }
+
+  // Only the starter's pure-core determinism test ships to games. The lab's
+  // sandbox + harness tests assert on lab-internal paths (games/ sandbox
+  // template, the generator itself) that a spawned project must not contain.
+  mkdirSync(join(dest, "tests"), { recursive: true });
+  for (const t of ["state.test.ts"]) {
+    cpSync(join(LAB_ROOT, "tests", t), join(dest, "tests", t));
+    log(`copied tests/${t}`);
   }
 
   // Governance + knowledge packs + templates (shared, game-relevant).
@@ -132,6 +140,11 @@ function rewritePackageJson(dest) {
   pkg.name = name;
   pkg.description = `Production-track game "${name}" spawned from the AI Game Lab.`;
   delete pkg.scripts["new-game"];
+  // Games ship only the pure-core determinism test; the lab's sandbox/harness
+  // tests and lint script reference lab-internal paths that games don't have.
+  pkg.scripts["test"] = "node --experimental-strip-types tests/state.test.ts";
+  delete pkg.scripts["lint"];
+  delete pkg.scripts["check"];
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
   log("rewrote package.json name");
 }
