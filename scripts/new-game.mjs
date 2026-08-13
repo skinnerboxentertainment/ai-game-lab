@@ -145,7 +145,11 @@ function rewritePackageJson(dest) {
   // tests and lint script reference lab-internal paths that games don't have.
   pkg.scripts["test"] = "node --experimental-strip-types tests/state.test.ts";
   delete pkg.scripts["lint"];
-  delete pkg.scripts["check"];
+  // Games inherit the lab's .github/workflows/ci.yml verbatim, which runs
+  // `npm run check` — so `check` must exist here too, just without `lint`
+  // (games never get lint.mjs copied, so it can't be part of their gate).
+  pkg.scripts["check"] =
+    "npm run test && npm run typecheck && npm run build && npm run verify";
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
   log("rewrote package.json name");
 }
@@ -256,7 +260,8 @@ npm install
 npm run dev        # http://localhost:5173
 npm run test       # determinism tests for the state core
 npm run build      # typecheck + production build
-npm run verify     # headless smoke test (needs dev server + Edge on :9222)
+npm run verify     # headless smoke test (self-contained: launches its own server + browser)
+npm run check      # test && typecheck && build && verify — must be green
 \`\`\`
 
 ## Rules

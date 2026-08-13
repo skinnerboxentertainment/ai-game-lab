@@ -149,12 +149,43 @@ function check(name: string, ok: boolean, detail?: string): void {
       testScript,
     );
     check(
-      "generated project has no lab-only lint/check scripts",
-      !pkg.scripts?.lint && !pkg.scripts?.check,
+      "generated project has no lab-only lint script",
+      !pkg.scripts?.lint,
     );
     check(
       "generated project has its own CI workflow",
       existsSync(join(gameDir, ".github", "workflows", "ci.yml")),
+    );
+    const ciYml = readFileSync(join(gameDir, ".github", "workflows", "ci.yml"), "utf8");
+    check(
+      "generated CI workflow runs npm run check",
+      /npm run check/.test(ciYml),
+    );
+    check(
+      // Regression guard for the bug an external audit caught: the CI
+      // workflow is copied verbatim from the lab and runs `npm run check`,
+      // so `check` must exist in every generated game — and since games
+      // never get lint.mjs copied, it must not depend on `lint`.
+      "generated check script exists and does not depend on lint",
+      typeof pkg.scripts?.check === "string" && !/npm run lint/.test(pkg.scripts.check),
+      pkg.scripts?.check,
+    );
+    check(
+      "generated README has no stale manual-verify instructions",
+      !readFileSync(join(gameDir, "README.md"), "utf8").includes(":9222"),
+    );
+
+    // Real functional proof, not just static text: the generated project's
+    // own test script actually runs and passes standalone (no npm install
+    // needed — it only touches src/state/, which has no external deps).
+    const gameTest = spawnSync(process.execPath, ["--experimental-strip-types", "tests/state.test.ts"], {
+      cwd: gameDir,
+      encoding: "utf8",
+    });
+    check(
+      "generated project's own `npm run test` command actually passes",
+      gameTest.status === 0,
+      gameTest.stderr?.trim(),
     );
   }
 }

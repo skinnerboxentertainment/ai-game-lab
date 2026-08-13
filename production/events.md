@@ -61,4 +61,33 @@
   - **Not yet verified:** the GitHub Actions workflow itself has never run —
     nothing has been pushed. ADR-0002 stays "Proposed" until it goes green
     on a real push.
+- **Independent audit (DeepSeek) of the above, blocker found + fixed.** Given
+  the change summary + full diff, the audit caught a real blocker missed
+  during Build: the copied `ci.yml` runs `npm run check`, but
+  `new-game.mjs` deleted `check` from every spawned game's `package.json` —
+  every game spawned since would fail CI immediately with `npm error
+  Missing script: "check"`. Confirmed by spawning a throwaway game and
+  inspecting it directly.
+  - Fixed: `new-game.mjs` now writes a game-appropriate `check` script
+    (`test && typecheck && build && verify`, no `lint`).
+  - Also fixed from the same audit: stale `README.md` template text in
+    `new-game.mjs`; missing `error` listener on the spawned browser process
+    (a spawn failure previously crashed outside `try`/`finally`, skipping
+    cleanup); no timeout on CDP commands or the initial CDP `/json` fetch
+    (a hang could stall the gate — now CI — indefinitely); POSIX teardown
+    used bare `proc.kill()` instead of killing the whole process group
+    (risk of orphaned Chromium children on Linux/macOS CI).
+  - `tests/harness.test.ts` gained real regression guards: a static check
+    that the generated `check` script doesn't reference `lint`, and — per
+    the audit's own recommendation — an assertion that actually **runs**
+    the generated project's test script, not just checks it exists.
+  - Re-verified end-to-end: spawned a fresh game, ran `npm install` for
+    real, then `npm run check` (test + typecheck + build + the
+    browser-launching verify step) in that project. All green — the
+    strongest evidence available short of an actual GitHub Actions run.
+  - Lab gate re-confirmed green: test 27/27 (harness suite grew), typecheck,
+    build, lint, verify 7/7.
+  - ADR-0002 updated with an audit-note addendum; status remains "Proposed"
+    (GitHub Actions still hasn't executed for real — that's the one
+    remaining true gap).
 

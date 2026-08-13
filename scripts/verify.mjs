@@ -91,10 +91,16 @@ try {
         "--window-size=1440,900",
         `${baseUrl}?seed=${SEED}`,
       ],
-      { stdio: "ignore" },
+      // detached on POSIX so killTree can signal the whole process group,
+      // not just the direct child (Chromium forks GPU/renderer/zygote procs).
+      { stdio: "ignore", detached: process.platform !== "win32" },
     );
+    let browserSpawnError = null;
+    browserProc.once("error", (err) => {
+      browserSpawnError = err;
+    });
 
-    const cdpPort = await waitForDevToolsPort(userDataDir);
+    const cdpPort = await waitForDevToolsPort(userDataDir, 10000, () => browserSpawnError);
     cdpBase = `http://127.0.0.1:${cdpPort}`;
   }
 
@@ -157,10 +163,12 @@ function resolveBrowserBinary() {
   return fallbacks.find((p) => existsSync(p)) ?? null;
 }
 
-async function waitForDevToolsPort(dir, timeoutMs = 10000) {
+async function waitForDevToolsPort(dir, timeoutMs = 10000, getSpawnError = () => null) {
   const file = join(dir, "DevToolsActivePort");
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
+    const spawnError = getSpawnError();
+    if (spawnError) throw new Error(`browser failed to launch: ${spawnError.message}`);
     if (existsSync(file)) {
       const port = parseInt(readFileSync(file, "utf8").split(/\r?\n/)[0], 10);
       if (Number.isFinite(port) && port > 0) return port;
@@ -172,7 +180,9 @@ async function waitForDevToolsPort(dir, timeoutMs = 10000) {
 
 /** Kill the browser and wait for it to actually exit before returning — the
  * caller removes its profile dir right after, and Windows still holds file
- * locks until the process has fully torn down, not just been signaled. */
+ * locks until the process has fully torn down, not just been signaled. On
+ * POSIX, kill the whole process group (Chromium forks GPU/renderer/zygote
+ * children); a bare SIGTERM to just the main process can leave them behind. */
 function killTree(proc) {
   return new Promise((resolveExit) => {
     if (proc.exitCode !== null || proc.signalCode !== null) {
@@ -183,7 +193,11 @@ function killTree(proc) {
     if (process.platform === "win32") {
       spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"]);
     } else {
-      proc.kill();
+      try {
+        process.kill(-proc.pid, "SIGKILL");
+      } catch {
+        proc.kill("SIGKILL");
+      }
     }
     // Fallback in case the exit event is somehow missed.
     setTimeout(resolveExit, 3000);
@@ -209,10 +223,23 @@ async function connectCdp(wsUrl) {
       else resolve(msg.result);
     }
   };
-  function send(method, params = {}) {
+  function send(method, params = {}, timeoutMs = 15000) {
     return new Promise((resolve, reject) => {
       const id = ++msgId;
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error(`CDP command timed out after ${timeoutMs}ms: ${method}`));
+      }, timeoutMs);
+      pending.set(id, {
+        resolve: (v) => {
+          clearTimeout(timer);
+          resolve(v);
+        },
+        reject: (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
+      });
       ws.send(JSON.stringify({ id, method, params }));
     });
   }
@@ -221,7 +248,9 @@ async function connectCdp(wsUrl) {
 
 async function runChecks(cdpBase, baseUrl) {
   const host = baseUrl.replace(/^https?:\/\//, "").split("/")[0];
-  const list = await (await fetch(`${cdpBase}/json`)).json();
+  const list = await (
+    await fetch(`${cdpBase}/json`, { signal: AbortSignal.timeout(15000) })
+  ).json();
   const page = list.find((t) => t.type === "page" && t.url.includes(host));
   if (!page) {
     check(`page target found for ${baseUrl}`, false, `no target on ${cdpBase}`);

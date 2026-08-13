@@ -95,7 +95,43 @@ is version-sensitive.
 
 ## Validation
 - `npm run verify` succeeds from a clean checkout with zero manual steps (no
-  pre-running dev server, no hand-launched browser).
+  pre-running dev server, no hand-launched browser). **Met** — two clean
+  back-to-back local runs.
 - `npm run check` is green in GitHub Actions on a fresh clone of the lab.
+  **Not yet met** — nothing has been pushed; the workflow has never executed
+  on a real runner.
 - A game spawned via `new-game -- <name>` after this change has its own
-  working `.github/workflows/ci.yml` out of the box.
+  working `.github/workflows/ci.yml` out of the box. **Met** — verified by
+  spawning a throwaway game, running `npm install` for real, then `npm run
+  check` end-to-end (test, typecheck, build, and the browser-launching
+  verify step) in that project. All green.
+
+## Audit note (2026-08-13)
+
+An independent audit (DeepSeek, given the change summary + full diff) caught
+a real blocker missed in the original Build pass: `.github/workflows/ci.yml`
+is copied verbatim into every spawned game and runs `npm run check`, but
+`new-game.mjs`'s `rewritePackageJson` deleted `check` from every spawned
+game's `package.json` (a leftover from before this ADR, when games had no
+`verify` step worth gating on). Every game spawned between the original
+Build and this fix would have failed CI on its first push with `npm error
+Missing script: "check"` — the third validation criterion above was false
+when first claimed "met."
+
+Fixed: `new-game.mjs` now writes a game-appropriate `check` script (`test &&
+typecheck && build && verify`, no `lint` — games never get `lint.mjs`
+copied). Also fixed from the same audit: a stale `README.md` template line
+in `new-game.mjs` (`writeReadme`) still describing the old manual verify
+flow; no `error` listener on the spawned browser process (an unhandled spawn
+failure would previously crash outside the `try`/`finally`, skipping
+cleanup); no timeout on CDP commands or the initial `/json` fetch (a hung
+call could stall `npm run check` — now CI — indefinitely); and POSIX
+teardown used a bare `proc.kill()` (single-process `SIGTERM`) instead of
+killing the whole process group, risking orphaned Chromium child processes
+on Linux/macOS. All fixed; see `tests/harness.test.ts` for the new
+regression-guard assertions, including one that actually runs the generated
+project's test script rather than only checking file contents.
+
+Status stays **Proposed** — the audit's own remaining open item (GitHub
+Actions has never executed for real) is still true and is the actual bar for
+"Accepted."
