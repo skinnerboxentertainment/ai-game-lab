@@ -201,4 +201,18 @@
   - **ADR-0003 flipped to Accepted.** Every validation criterion met with
     real evidence; the one review finding was fixed and re-verified, not
     left as a known issue.
+- **Third CI flake, fixed outside this session.** The very next push
+  (`cae124c`, ADR-0003's closing docs commit) failed CI again — run
+  `31714351543` — on a new symptom this time: browser stderr showed
+  `Failed to connect to the bus: Could not parse server address`, a D-Bus
+  connection flake distinct from the AppArmor/sandbox issue already fixed.
+  Diagnosed and fixed directly by the account owner (commit `24d2dd9`,
+  09:21, ~7 min after this session's prior commit — outside this
+  conversation's tool calls): `resolveBrowserBinary()` → plural
+  `resolveBrowserBinaries()`, launch wrapped in a retry loop across every
+  resolvable browser over two rounds, same per-attempt teardown discipline
+  as the rest of the harness. Confirmed (by this session, after the fact):
+  run `31714938661` green, full 43-check gate, log-verified.
+  Documented in `docs/architecture/adr/0002-ci-and-self-contained-verify.md`
+  since it's a continuation of that ADR's subject, not ADR-0003's.
 

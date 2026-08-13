@@ -156,3 +156,24 @@ just the run's overall conclusion.
 
 Status flips to **Accepted**: all three original validation criteria are now
 met with real evidence, not inference.
+
+## Third CI flake + retry fix (2026-08-13, outside this session)
+
+A later push (`cae124c`, ADR-0003's closing docs commit) failed CI again —
+run `31714351543` — this time on a different symptom: `Failed to connect to
+the bus: Could not parse server address` in the captured browser stderr,
+followed by the same "timed out waiting for the browser's DevTools port".
+Not the AppArmor/sandbox issue (already fixed); this is CI-runner-instance
+variance in headless Chromium's D-Bus connection attempt — a known class of
+transient flake, distinct from a code defect.
+
+Fixed in commit `24d2dd9`: `resolveBrowserBinary()` (singular, first match)
+became `resolveBrowserBinaries()` (plural, every resolvable binary in
+preference order), and the launch logic moved into a retryable
+`openBrowserDevTools(path, baseUrl)` helper — the harness now tries every
+available browser across two rounds before giving up, with the same
+per-attempt teardown discipline (proc/fd/tempdir cleaned up before the next
+try) as the rest of the file. Confirmed on run `31714938661`: full 43-check
+gate green on `ubuntu-latest`, `launching browser: /usr/bin/microsoft-edge-stable`
+succeeded on the first attempt (log-verified, not just the run's
+conclusion).
