@@ -114,6 +114,7 @@ function buildProject(dest) {
     "docs/architecture",
     "skills",
     "templates",
+    ".github/workflows",
   ];
   for (const d of sharedDirs) {
     cpSync(join(LAB_ROOT, d), join(dest, d), { recursive: true });

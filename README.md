@@ -59,7 +59,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run test       # determinism test for the state core
 npm run build      # typecheck + production build
-npm run verify     # headless smoke test (needs dev server + Edge on :9222)
+npm run verify     # headless smoke test (self-contained: launches its own server + browser)
 npm run new-game -- <name>   # spawn a new game project as a sibling repo
 ```
 

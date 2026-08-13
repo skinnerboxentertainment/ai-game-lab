@@ -24,8 +24,7 @@ npm run dev        # http://localhost:5173 (Particle Galaxy demo, ?seed=1337)
 Confirm the machine works before building anything:
 
 ```bash
-npm run check      # test && typecheck && build && lint — must be green
-npm run verify     # headless smoke test (needs dev server + Edge on :9222)
+npm run check      # test && typecheck && build && lint && verify — must be green
 ```
 
 ## 2. Pick a track
@@ -75,7 +74,7 @@ Commit → Build → Prove**.
 After every change:
 
 ```bash
-npm run test && npm run typecheck && npm run build && npm run verify
+npm run check
 ```
 
 Rules that keep it honest:

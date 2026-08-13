@@ -52,8 +52,9 @@ Two actors, three tiers:
       (`TICK = 1/60`) so it is deterministic regardless of frame rate.
 - [ ] Server-authoritative for any economy/progression/irreversible outcome.
 - [ ] One system/object per file; split any file past ~500 lines.
-- [ ] Green gates after EVERY change: `tests + typecheck + build + lint` plus a
-      smoke scene. Add a regression test for any behavioral change.
+- [ ] Green gates after EVERY change: `npm run check` (test + typecheck +
+      build + lint + self-contained headless verify). Add a regression test
+      for any behavioral change.
 - [ ] Evidence is Definition of Done: a Logic story marked done without tests is
       a blocker (see `docs/packs/qa-evidence-pack.md`).
 - [ ] Never touch files outside your stated ownership list.
@@ -70,7 +71,7 @@ Two actors, three tiers:
 | `npm run verify` | Headless smoke test (CDP screenshot sampling) |
 | `npm run new-game -- <name>` | Spawn a brand-new production-track game project as a sibling repo (never edits the lab) |
 | `npm run lint` | Static check of scripts (currently `node --check` on `scripts/*.mjs`) |
-| `npm run check` | One-command gate: `test && typecheck && build && lint` |
+| `npm run check` | One-command gate: `test && typecheck && build && lint && verify` |
 | `npm run preview` | Serve the production build |
 
 ## Architecture (this repo)
@@ -92,15 +93,22 @@ demonstrated in the spawned game projects (e.g. the Asteroids game).
 
 Headless pages report `document.hidden === true` → rAF throttled (~5-8 FPS) and
 `extract.pixels()` returns zeros. **Do not trust FPS or extract readings from
-headless.** Use screenshot sampling:
+headless.** Use screenshot sampling instead:
 
-1. `npm run dev`
-2. Start Edge headless with a debug port:
-   `msedge --headless=new --disable-gpu --enable-unsafe-swiftshader --no-first-run --user-data-dir=%TEMP%\edge-cdp --remote-debugging-port=9222 --window-size=1440,900 http://localhost:5173/?seed=1337`
-3. `node scripts/verify.mjs`
+`npm run verify` is self-contained: it starts its own Vite server (ephemeral
+port) and its own headless browser (ephemeral CDP port, read from the
+browser's `DevToolsActivePort` file), runs the checks, then tears both down.
+No manual dev server or browser launch needed, and it's safe to run alongside
+an already-open `npm run dev`. Browser resolution tries `msedge` /
+`microsoft-edge-stable` / `microsoft-edge` / `google-chrome-stable` /
+`google-chrome` / `chromium-browser` / `chromium` in order; set
+`VERIFY_BROWSER_PATH` if none of those resolve. `npm run verify <url> [port]`
+attaches to an already-running server + browser instead, for manual
+debugging.
 
 `scripts/verify.mjs` checks boot (`window.__demo`), 1280×720 logical display,
 contain-scale math, and that content actually renders (screenshot sampling).
+CI runs this on every push (`.github/workflows/ci.yml`).
 
 ## Knowledge packs (docs/packs/)
 

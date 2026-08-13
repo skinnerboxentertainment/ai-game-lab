@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "AI Game-Making Lab — production-track starter (Vite + TypeScript + PixiJS v8 + bitECS) with a deterministic pure-core, fixed-timestep sim, and a headless verify harness. See README.md and docs/AI_GAME_LAB_BLUEPRINT.md.",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -12,7 +15,7 @@
     "lint": "node scripts/lint.mjs",
     "verify": "node scripts/verify.mjs",
     "new-game": "node scripts/new-game.mjs",
-    "check": "npm run test && npm run typecheck && npm run build && npm run lint",
+    "check": "npm run test && npm run typecheck && npm run build && npm run lint && npm run verify",
     "preview": "vite preview"
   },
   "dependencies": {

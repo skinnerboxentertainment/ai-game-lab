@@ -152,6 +152,10 @@ function check(name: string, ok: boolean, detail?: string): void {
       "generated project has no lab-only lint/check scripts",
       !pkg.scripts?.lint && !pkg.scripts?.check,
     );
+    check(
+      "generated project has its own CI workflow",
+      existsSync(join(gameDir, ".github", "workflows", "ci.yml")),
+    );
   }
 }
 
