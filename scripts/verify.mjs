@@ -72,56 +72,34 @@ try {
     const vitePort = viteServer.httpServer.address().port;
     baseUrl = `http://127.0.0.1:${vitePort}/`;
 
-    const browserPath = resolveBrowserBinary();
-    if (!browserPath) {
+    const browsers = resolveBrowserBinaries();
+    if (!browsers.length) {
       throw new Error(
         "no headless-capable browser found (tried msedge/microsoft-edge/" +
           "google-chrome/chromium) — set VERIFY_BROWSER_PATH to an explicit binary path",
       );
     }
 
-    userDataDir = mkdtempSync(join(tmpdir(), "verify-cdp-"));
-    // Capture the browser's stderr to a file so a launch failure is
-    // diagnosable instead of a blind timeout (stdout/stderr are otherwise
-    // dropped on CI).
-    const stderrLog = join(userDataDir, "browser-stderr.log");
-    stderrFd = openSync(stderrLog, "w");
-    browserProc = spawn(
-      browserPath,
-      [
-        "--headless=new",
-        "--disable-gpu",
-        // Required on CI/container kernels (e.g. Ubuntu 24.04 GitHub runners)
-        // where unprivileged user namespaces are restricted by AppArmor —
-        // Chromium's sandbox then fails at startup and the browser exits
-        // before DevTools opens. Safe here: throwaway profile, first-party
-        // localhost content only.
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--enable-unsafe-swiftshader",
-        "--no-first-run",
-        `--user-data-dir=${userDataDir}`,
-        "--remote-debugging-port=0",
-        "--window-size=1440,900",
-        `${baseUrl}?seed=${SEED}`,
-      ],
-      // detached on POSIX so killTree can signal the whole process group,
-      // not just the direct child (Chromium forks GPU/renderer/zygote procs).
-      { stdio: ["ignore", "ignore", stderrFd], detached: process.platform !== "win32" },
-    );
-    let browserSpawnError = null;
-    browserProc.once("error", (err) => {
-      browserSpawnError = err;
-    });
-
-    const cdpPort = await waitForDevToolsPort(
-      userDataDir,
-      browserProc,
-      stderrLog,
-      20000,
-      () => browserSpawnError,
-    );
-    cdpBase = `http://127.0.0.1:${cdpPort}`;
+    // Retry across browsers: a browser can fail to open DevTools transiently
+    // (cold-start stall, version-specific hang on a CI runner) while the next
+    // candidate works. Two rounds bound the worst case (~2 × N × 20s).
+    const launchErrors = [];
+    cdpBase = null;
+    for (let round = 0; round < 2 && !cdpBase; round++) {
+      for (const path of browsers) {
+        try {
+          cdpBase = await openBrowserDevTools(path, baseUrl);
+          break;
+        } catch (err) {
+          launchErrors.push(err.message);
+        }
+      }
+    }
+    if (!cdpBase) {
+      throw new Error(
+        "could not open DevTools on any browser — " + launchErrors.join(" | "),
+      );
+    }
   }
 
   await runChecks(cdpBase, baseUrl);
@@ -147,8 +125,11 @@ process.exit(0);
 
 // --- self-contained mode helpers ---
 
-function resolveBrowserBinary() {
-  if (process.env.VERIFY_BROWSER_PATH) return process.env.VERIFY_BROWSER_PATH;
+/** All resolvable browser binaries, in preference order (deduped). On CI the
+ * runner ships several (Edge + Chrome), so the launch loop can fall back to a
+ * sibling binary when the preferred one fails to open DevTools. */
+function resolveBrowserBinaries() {
+  if (process.env.VERIFY_BROWSER_PATH) return [process.env.VERIFY_BROWSER_PATH];
 
   const candidates = [
     "msedge",
@@ -160,11 +141,14 @@ function resolveBrowserBinary() {
     "chromium",
   ];
   const finder = process.platform === "win32" ? "where" : "which";
+  const found = [];
   for (const c of candidates) {
     const r = spawnSync(finder, [c], { encoding: "utf8" });
     if (r.status === 0) {
-      const first = r.stdout.split(/\r?\n/).find((l) => l.trim());
-      if (first) return first.trim();
+      for (const line of r.stdout.split(/\r?\n/)) {
+        const p = line.trim();
+        if (p && !found.includes(p)) found.push(p);
+      }
     }
   }
 
@@ -181,7 +165,70 @@ function resolveBrowserBinary() {
         "/Applications/Chromium.app/Contents/MacOS/Chromium",
       ],
     }[process.platform] ?? [];
-  return fallbacks.find((p) => existsSync(p)) ?? null;
+  for (const p of fallbacks) {
+    if (existsSync(p) && !found.includes(p)) found.push(p);
+  }
+  return found;
+}
+
+/** Launch one browser instance and wait for its CDP endpoint. On success the
+ * module-level browserProc/userDataDir/stderrFd are set so the main `finally`
+ * performs teardown. On failure this cleans up its own process + profile dir
+ * and rethrows with diagnostics. */
+async function openBrowserDevTools(browserPath, baseUrl) {
+  const dir = mkdtempSync(join(tmpdir(), "verify-cdp-"));
+  // Capture the browser's stderr to a file so a launch failure is
+  // diagnosable instead of a blind timeout (stdout/stderr are otherwise
+  // dropped on CI).
+  const stderrLog = join(dir, "browser-stderr.log");
+  let fd = null;
+  let proc = null;
+  let succeeded = false;
+  try {
+    fd = openSync(stderrLog, "w");
+    console.log(`launching browser: ${browserPath}`);
+    proc = spawn(
+      browserPath,
+      [
+        "--headless=new",
+        "--disable-gpu",
+        // Required on CI/container kernels (e.g. Ubuntu 24.04 GitHub runners)
+        // where unprivileged user namespaces are restricted by AppArmor —
+        // Chromium's sandbox then fails at startup and the browser exits
+        // before DevTools opens. Safe here: throwaway profile, first-party
+        // localhost content only.
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--enable-unsafe-swiftshader",
+        "--no-first-run",
+        `--user-data-dir=${dir}`,
+        "--remote-debugging-port=0",
+        "--window-size=1440,900",
+        `${baseUrl}?seed=${SEED}`,
+      ],
+      // detached on POSIX so killTree can signal the whole process group,
+      // not just the direct child (Chromium forks GPU/renderer/zygote procs).
+      { stdio: ["ignore", "ignore", fd], detached: process.platform !== "win32" },
+    );
+    let spawnError = null;
+    proc.once("error", (err) => {
+      spawnError = err;
+    });
+
+    const cdpPort = await waitForDevToolsPort(dir, proc, stderrLog, 20000, () => spawnError);
+
+    browserProc = proc;
+    userDataDir = dir;
+    stderrFd = fd;
+    succeeded = true;
+    return `http://127.0.0.1:${cdpPort}`;
+  } finally {
+    if (!succeeded) {
+      if (proc) await killTree(proc);
+      if (fd !== null) closeSync(fd);
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    }
+  }
 }
 
 async function waitForDevToolsPort(dir, proc, stderrLog, timeoutMs = 20000, getSpawnError = () => null) {
