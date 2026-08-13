@@ -90,4 +90,25 @@
   - ADR-0002 updated with an audit-note addendum; status remains "Proposed"
     (GitHub Actions still hasn't executed for real — that's the one
     remaining true gap).
+- **Pushed. First real CI run failed** (`31704002178`, commit `2a9a1af`):
+  `verify harness error: timed out waiting for the browser's DevTools port`.
+  Root cause (found via a second independent audit pass): GitHub's
+  `ubuntu-latest` (Ubuntu 24.04) runners restrict unprivileged user
+  namespaces via AppArmor, breaking Chromium's sandbox init — the browser
+  exits before DevTools opens. The old harness gave zero diagnostic detail
+  (no stderr capture), just a blind timeout.
+  - Fixed (commit `5fa2800`): `--no-sandbox` (safe — throwaway profile,
+    localhost-only content), browser stderr captured to a log file, fail-fast
+    on early browser exit with exit code + stderr tail surfaced, timeout
+    bumped 10s → 20s for CI cold starts.
+  - Verified locally (green) and the new failure path itself proven (pointed
+    `VERIFY_BROWSER_PATH` at a non-browser binary → fast, clear error instead
+    of a hang).
+  - Re-pushed. **Second real CI run passed** (`31704935262`, commit
+    `5fa2800`): verify 7/7 on a real `ubuntu-latest` runner — confirmed by
+    reading the actual step log, not just the run's conclusion.
+  - **ADR-0002 flipped to Accepted.** All three original validation criteria
+    now met with real evidence: self-contained verify runs clean locally,
+    spawned games get a working gate (proven via a real `npm install` +
+    `npm run check`), and GitHub Actions itself is green.
 

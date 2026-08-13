@@ -1,7 +1,7 @@
 # ADR-0002: CI + self-contained verify harness
 
 **Date:** 2026-08-13
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 `scripts/verify.mjs` only connects to CDP — it assumes a human already ran
@@ -98,8 +98,9 @@ is version-sensitive.
   pre-running dev server, no hand-launched browser). **Met** — two clean
   back-to-back local runs.
 - `npm run check` is green in GitHub Actions on a fresh clone of the lab.
-  **Not yet met** — nothing has been pushed; the workflow has never executed
-  on a real runner.
+  **Met** — after one real failure and fix (see Audit note below), run
+  `31704935262` on commit `5fa2800` passed clean on `ubuntu-latest`,
+  verify 7/7.
 - A game spawned via `new-game -- <name>` after this change has its own
   working `.github/workflows/ci.yml` out of the box. **Met** — verified by
   spawning a throwaway game, running `npm install` for real, then `npm run
@@ -132,6 +133,26 @@ on Linux/macOS. All fixed; see `tests/harness.test.ts` for the new
 regression-guard assertions, including one that actually runs the generated
 project's test script rather than only checking file contents.
 
-Status stays **Proposed** — the audit's own remaining open item (GitHub
-Actions has never executed for real) is still true and is the actual bar for
-"Accepted."
+## Real CI run + second fix (2026-08-13)
+
+The first real push (commit `2a9a1af`) did fail CI — run `31704002178`,
+`verify harness error: timed out waiting for the browser's DevTools port`,
+with no diagnostic detail (the harness didn't capture browser stderr yet).
+Root cause: GitHub's `ubuntu-latest` (Ubuntu 24.04) runners restrict
+unprivileged user namespaces via AppArmor, which breaks Chromium's sandbox
+init — the browser exits before DevTools ever opens. This is a well-known,
+common failure class for headless Chromium on modern CI/container kernels.
+
+Fixed in commit `5fa2800`: added `--no-sandbox` (safe here — throwaway
+profile, first-party localhost content only), captured the browser's stderr
+to a log file so a launch failure is diagnosable instead of a blind timeout,
+made `waitForDevToolsPort` fail fast on early process exit (surfacing exit
+code + stderr tail) instead of waiting out the full timeout, and bumped the
+timeout 10s → 20s for CI cold starts.
+
+Re-pushed; run `31704935262` on `5fa2800` passed clean — verify 7/7 on a
+real `ubuntu-latest` runner, confirmed by reading the actual step log, not
+just the run's overall conclusion.
+
+Status flips to **Accepted**: all three original validation criteria are now
+met with real evidence, not inference.
