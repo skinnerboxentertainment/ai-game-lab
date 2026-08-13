@@ -121,10 +121,11 @@ suggest the pack and ask before loading:
 | `pixijs-lab-pack.md` | any render/input/asset/audio work |
 | `qa-evidence-pack.md` | any story completion / refactor / bug fix |
 | `kenney-assets` | any sprite/asset selection, game spec design, "what assets should I use" |
+| `gamedev-wisdom-pack.md` | any mechanic/system/AI-behavior design decision, `docs/SPEC.md` |
 
 ## Skills & templates
 
-- `skills/` — reusable instruction packs (`verify`, `add-sprite`, `balance`, `kenney-assets`).
+- `skills/` — reusable instruction packs (`verify`, `add-sprite`, `balance`, `kenney-assets`, `gamedev-wisdom`).
 - `templates/` — prompt/spec/spritesheet templates for new games.
 - `games/` — sandbox track uses LittleJS single-file (`games/sandbox-template`);
   production track spawns sibling projects via `npm run new-game -- <name>`.
