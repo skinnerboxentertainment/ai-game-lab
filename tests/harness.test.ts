@@ -175,11 +175,15 @@ function check(name: string, ok: boolean, detail?: string): void {
       !readFileSync(join(gameDir, "README.md"), "utf8").includes(":9222"),
     );
 
-    // Real functional proof, not just static text: the generated project's
-    // own test script actually runs and passes standalone (no npm install
-    // needed — it only touches src/state/, which has no external deps).
-    const gameTest = spawnSync(process.execPath, ["--experimental-strip-types", "tests/state.test.ts"], {
+    // Real functional proof, not just static text: actually invoke `npm run
+    // test` (not a reimplementation of what the script string says) so a
+    // future divergence between the script string and what it really runs
+    // can't slip past a check that merely asserts string equality. No
+    // npm install needed — it only touches src/state/, which has no
+    // external deps. shell: true because `npm` is a .cmd shim on Windows.
+    const gameTest = spawnSync("npm", ["run", "test"], {
       cwd: gameDir,
+      shell: true,
       encoding: "utf8",
     });
     check(
