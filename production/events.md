@@ -134,4 +134,19 @@
   - Next: Slice 2 (`GameState` wrapper + `toJSON`/`fromJSON`, tested via
     round-trip), then Slice 3 (one action + `scripts/verify.mjs`
     extension).
+  - **Slice 2: `GameState` wrapper + serialization.** Added `GameState`
+    (`{ version, seed, rngState, tick, particles }`), `createGameState`,
+    `stepState`, `toJSON`/`fromJSON` to `src/state/core.ts`. Extracted
+    `spawnParticle` as a shared internal primitive so `seedParticles` (kept,
+    existing callers/tests untouched) and `createGameState` don't duplicate
+    spawn logic. Rebuilt `simulate()` on top of `createGameState`/
+    `stepState` instead of its own parallel spawn+step loop — one code path,
+    not two. Deliberately core-layer only: `ParticleGalaxy`/`ecs/world.ts`
+    untouched, live demo behavior unaffected (verify still 7/7).
+    - New tests: a real `JSON.stringify`/`toJSON`/`fromJSON`/`JSON.parse`
+      round-trip mid-simulation is bit-identical to uninterrupted
+      simulation; `stepState`/`toJSON` don't mutate their input.
+    - Gate green: test 26/26 (was 24), typecheck, build, lint, verify 7/7.
+    - Next: Slice 3 — one `SPAWN_BURST` action, wired to a click in
+      `ParticleGalaxy`, with `scripts/verify.mjs` extended to prove it.
 

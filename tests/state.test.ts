@@ -4,7 +4,16 @@
  * This is the lab's "tests as backpressure" contract — the core must be
  * provably deterministic so an agent (and a headless harness) can verify work.
  */
-import { seedParticles, stepParticle, simulate, TICK } from "../src/state/core.ts";
+import {
+  seedParticles,
+  stepParticle,
+  simulate,
+  TICK,
+  createGameState,
+  stepState,
+  toJSON,
+  fromJSON,
+} from "../src/state/core.ts";
 import { createRng, nextRandom } from "../src/state/rng.ts";
 import type { RngState } from "../src/state/rng.ts";
 
@@ -94,6 +103,38 @@ check(
   check(
     "nextRandom does not mutate its input state",
     JSON.stringify(before) === snapshot,
+  );
+}
+
+// 8. GameState serialization round-trips mid-simulation: pausing to save
+// (a real JSON.stringify/parse round-trip through toJSON/fromJSON, standing
+// in for an actual save/load) and resuming continues identically to never
+// having paused.
+{
+  let uninterrupted = createGameState(99, 30, BOUNDS);
+  for (let i = 0; i < 20; i++) uninterrupted = stepState(uninterrupted, BOUNDS);
+
+  let resumed = createGameState(99, 30, BOUNDS);
+  for (let i = 0; i < 10; i++) resumed = stepState(resumed, BOUNDS);
+  const saved = JSON.stringify(toJSON(resumed));
+  resumed = fromJSON(JSON.parse(saved));
+  for (let i = 10; i < 20; i++) resumed = stepState(resumed, BOUNDS);
+
+  check(
+    "GameState round-trips through JSON mid-simulation",
+    JSON.stringify(uninterrupted) === JSON.stringify(resumed),
+  );
+}
+
+// 9. GameState functions are pure: stepState/toJSON never mutate their input.
+{
+  const state = createGameState(5, 10, BOUNDS);
+  const snapshot = JSON.stringify(state);
+  stepState(state, BOUNDS);
+  toJSON(state);
+  check(
+    "stepState/toJSON do not mutate their input GameState",
+    JSON.stringify(state) === snapshot,
   );
 }
 

@@ -16,11 +16,14 @@ already claim. Three incremental slices, each independently gated.
 - (none blocking)
 
 ## Next Action
-Slice 1 done and gated (green: test 24/24, typecheck, build, lint, verify
-7/7). Next: Slice 2 — wrap the particle array in a real `GameState`
-(`{ version, seed, rngState, tick, particles }`), add `toJSON()`/
-`fromJSON()`, and prove a mid-simulation serialize/deserialize round-trip
-is bit-identical to uninterrupted simulation.
+Slices 1-2 done and gated (green: test 26/26, typecheck, build, lint, verify
+7/7). Slice 2 is core-layer only — `ParticleGalaxy`/`ecs/world.ts` untouched,
+live demo unaffected. Next: Slice 3 — one `SPAWN_BURST` action +
+`applyAction(state, action, rng) -> state`, wire a click handler in
+`ParticleGalaxy` to dispatch it (this is where the scene actually starts
+holding a `GameState` instead of driving bitECS straight from
+`seedParticles`), and extend `scripts/verify.mjs` to dispatch a synthetic
+click and confirm rendered output changed.
 
 ## Blockers
 - None.
