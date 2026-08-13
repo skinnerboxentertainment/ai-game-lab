@@ -6,36 +6,46 @@ clean. Keep it terse.
 ## Last session
 
 - **Date:** 2026-08-13
-- **Worked on:** ADR-0002 — self-contained `scripts/verify.mjs` (no more
-  manual dev-server + Edge-on-:9222 setup) and GitHub Actions CI for the lab
-  and every spawned game. One of the deferred P3 items from the prior
-  session (see old note below).
-- **Done:**
-  - `scripts/verify.mjs` rewritten: in-process Vite server on an ephemeral
-    port, self-launched headless browser, ephemeral CDP port via
-    `DevToolsActivePort`, cross-platform binary resolution
-    (`VERIFY_BROWSER_PATH` override), proper teardown. `verify` folded into
-    `npm run check`.
-  - `.github/workflows/ci.yml` added to the lab; `new-game.mjs` now copies it
-    into every spawned game too, along with a game-appropriate `check`
-    script.
-  - Two independent audits (DeepSeek) caught real bugs, both fixed and
-    re-verified:
-    1. Spawned games got a CI workflow that called a `check` script the
-       generator had deleted — guaranteed first-push failure. Fixed, plus
-       four hardening gaps (spawn-error handling, CDP timeouts, POSIX
-       process-group kill).
-    2. The first real GitHub Actions run failed: Ubuntu 24.04's AppArmor
-       policy breaks Chromium's sandbox init. Fixed with `--no-sandbox` +
-       stderr capture + fail-fast diagnostics.
-  - Second real CI run passed clean. **ADR-0002 status: Accepted.**
-- **Decisions made:** see `production/events.md` and
-  `docs/architecture/adr/0002-ci-and-self-contained-verify.md`.
+- **Worked on:** ADR-0002 (self-contained verify + CI), then ADR-0003 (the
+  starter demo now actually demonstrates the serializable `GameState` +
+  action-transition pattern its own docs claim — the deferred P3 item from
+  the session before).
+- **Done (ADR-0002):**
+  - `scripts/verify.mjs` rewritten: in-process Vite server, self-launched
+    headless browser, ephemeral ports, cross-platform binary resolution,
+    proper teardown. `verify` folded into `npm run check`.
+  - `.github/workflows/ci.yml` added to the lab and every spawned game.
+  - Two independent audits (DeepSeek) caught real bugs, fixed and
+    re-verified: spawned games got a CI workflow calling a `check` script
+    the generator had deleted (guaranteed first-push failure), plus four
+    hardening gaps; then the first real GitHub Actions run failed on Ubuntu
+    24.04's AppArmor sandbox restriction, fixed with `--no-sandbox` +
+    diagnostics. **Status: Accepted**, confirmed on a real CI run.
+- **Done (ADR-0003):**
+  - Three incremental slices, each independently gated: (1) `src/state/rng.ts`
+    rewritten from a stateful closure to plain, serializable state; (2) a
+    real `GameState` wrapper + `toJSON`/`fromJSON`, proven via a mid-
+    simulation serialize/deserialize round-trip test; (3) a `SPAWN_BURST`
+    action wired to a click in `ParticleGalaxy` via Pixi's own event system,
+    with `scripts/verify.mjs` extended to dispatch a real CDP click and
+    confirm the sprite count rose by exactly `burstCount`.
+  - A third independent review (DeepSeek) confirmed the architecture and
+    caught one real issue — `verify.mjs` hardcoded `20 == BURST_COUNT` as a
+    hidden cross-file constant. Fixed: the scene now exposes `burstCount`
+    publicly; `verify.mjs` reads it live instead of duplicating it.
+  - **Status: Accepted**, confirmed on a real CI run (`before=140 after=160`
+    on `ubuntu-latest`, read from the actual step log).
+- **Decisions made:** see `production/events.md`,
+  `docs/architecture/adr/0002-ci-and-self-contained-verify.md`, and
+  `docs/architecture/adr/0003-serializable-gamestate-and-actions.md`.
 
 ## Current state
 
-- Lab gates green (test + typecheck + build + lint + self-contained verify),
-  confirmed both locally and on a real GitHub Actions `ubuntu-latest` run.
+- Lab gates green (test 28/28 + typecheck + build + lint + self-contained
+  verify 8/8), confirmed both locally and on real GitHub Actions
+  `ubuntu-latest` runs. The starter demo now genuinely matches its own
+  `AGENTS.md`/`ARCHITECTURE.md` claims — every future spawned game inherits
+  a template that proves the pattern, not one that admits to simplifying it.
   Asteroids game is a working sibling project at
   `C:\Users\oscar\AI WORKBENCH\asteroids` (tagged v1 + rotation fix, as of
   the last time it was touched — not revisited this session).
@@ -43,7 +53,6 @@ clean. Keep it terse.
 ## Next session should
 
 1. Resume the Asteroids game (its `production/active.md` was last at Prove).
-2. Consider the remaining deferred P3 item: starter upgrade to the full
-   serializable `GameState` + action-transition contract (currently only the
-   particle-sim toy demonstrates the pure-core pattern; Asteroids is the
-   only place the full pattern is proven out).
+2. No remaining deferred P3 items from prior sessions — both were closed
+   this session (self-contained verify/CI, and the GameState/action
+   pattern). Next objective is open.

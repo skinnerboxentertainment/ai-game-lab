@@ -1,7 +1,7 @@
 # ADR-0003: Serializable GameState + action-transition pattern for the starter demo
 
 **Date:** 2026-08-13
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 `AGENTS.md` and `docs/ARCHITECTURE.md` both claim the production-track
@@ -113,11 +113,42 @@ game-like flourishes).
 - Slice 1: existing determinism tests (`tests/state.test.ts`) pass
   unchanged; a new test proves the RNG's own state round-trips — resuming
   from a serialized mid-sequence state produces the same continuation as
-  never having paused.
+  never having paused. **Met** (commit `2bb39eb`).
 - Slice 2: a test serializes a `GameState` mid-simulation, deserializes it,
   continues stepping, and gets output bit-identical to uninterrupted
-  simulation.
+  simulation. **Met** (commit `393da62`).
 - Slice 3: `applyAction` is pure (input state unchanged, matching this
   repo's existing purity-test convention); extended `npm run verify`
   dispatches a real click and confirms rendered output actually changed.
-- `npm run check` green after each slice, not only at the end.
+  **Met** (commit `cd95ad4`) — both locally and, per the note below, on a
+  real GitHub Actions runner.
+- `npm run check` green after each slice, not only at the end. **Met.**
+- One implementation detail departs from the docs' literal phrasing:
+  `applyAction(state, action)` takes 2 arguments, not the 3 implied by
+  `(state, action, seededRng) -> newState`. `seededRng` isn't a separate
+  parameter because it already lives inside `state.rngState` — that's what
+  Slices 1-2 made possible, and a third argument would just restate
+  something `state` already carries. Documented inline at the call site.
+
+## Real CI confirmation + one review fix (2026-08-13)
+
+Slices 1-2 were pushed and confirmed green in GitHub Actions individually.
+Slice 3 (commit `cd95ad4`) was committed locally, then an independent
+review (DeepSeek, given the full diff) confirmed everything held up but
+flagged one real issue: `scripts/verify.mjs` hardcoded `20 == BURST_COUNT`
+from `ParticleGalaxy.ts` with a "keep in sync" comment — a hidden
+cross-file constant, exactly the kind of thing that quietly drifts. Fixed
+in `33a0002`: `ParticleGalaxy` now exposes `burstCount` as a public
+readonly field; `verify.mjs` reads it off `window.__demo.scene` at runtime
+instead of duplicating the number.
+
+Pushed. CI run `31713676952` on `33a0002` passed clean on `ubuntu-latest` —
+confirmed by reading the actual step log, not just the run's conclusion:
+`click dispatches SPAWN_BURST (exactly burstCount=20 more sprites) —
+before=140 after=160`. The full chain (real CDP mouse event → Pixi's event
+system → `applyAction` → new sprites) is proven on a real runner, not just
+locally.
+
+Status flips to **Accepted**: every validation criterion above is met with
+real evidence, and the one review finding was fixed and re-verified rather
+than left as a known issue.

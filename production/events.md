@@ -180,4 +180,25 @@
       (including the new click-dispatch check, `before=140 after=160`).
   - **ADR-0003 complete, locally.** Not yet pushed for a real CI
     confirmation — that's the next step, same discipline as ADR-0002.
+- **Independent review (DeepSeek) of Slices 1-3, one fix.** Confirmed the
+  gate, re-derived the architecture from the diffs, and correctly assessed
+  three things as intentional/documented rather than defects: the
+  state-vs-live-position split, the unenforced `version` field, and
+  `ARCHITECTURE.md`'s `{player, run, season}` placeholders being the
+  spawned-game template rather than lab-specific prose. Flagged one real
+  issue: `scripts/verify.mjs` hardcoded `20 == BURST_COUNT` from
+  `ParticleGalaxy.ts` with a "keep in sync" comment — a hidden cross-file
+  constant.
+  - Fixed (`33a0002`): `ParticleGalaxy` exposes `burstCount` as a public
+    readonly field; `verify.mjs` reads it off `window.__demo.scene` at
+    runtime instead of duplicating the number.
+  - Pushed. **CI run `31713676952` on `33a0002` passed clean** on
+    `ubuntu-latest` — confirmed by reading the actual step log:
+    `click dispatches SPAWN_BURST (exactly burstCount=20 more sprites) —
+    before=140 after=160`. The full chain (real CDP mouse event → Pixi's
+    event system → `applyAction` → new sprites) is proven on a real
+    runner, not just locally.
+  - **ADR-0003 flipped to Accepted.** Every validation criterion met with
+    real evidence; the one review finding was fixed and re-verified, not
+    left as a known issue.
 

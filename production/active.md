@@ -4,23 +4,22 @@
 Prove
 
 ## Current Objective
-ADR-0003: upgrade the starter demo to actually demonstrate the serializable
-`GameState` + `(state, action, seededRng) -> newState` pattern the docs
-already claim. Three incremental slices, each independently gated.
+ADR-0003 shipped and **Accepted**: the starter demo now actually
+demonstrates the serializable `GameState` + `(state, action) -> newState`
+pattern the docs claim. Three incremental slices, each independently
+gated, plus one independent-review fix (DeepSeek caught a hardcoded
+cross-file constant in `scripts/verify.mjs`), all confirmed green on a
+real GitHub Actions run.
 
 ## Active Packs
-- state-authority: state/RNG/serialization is the entire point of this
-  changeset
+- (none active)
 
 ## Open Decisions
 - (none blocking)
 
 ## Next Action
-All three slices done and gated locally (green: test 28/28, typecheck,
-build, lint, verify 8/8 — including a real CDP-dispatched click proving
-SPAWN_BURST end-to-end: `before=140 after=160`, exact `BURST_COUNT` match,
-confirmed non-flaky across two runs). Not yet pushed — push + confirm CI,
-then this ADR-0003 objective is closed.
+This objective is closed. Resume the Asteroids game in
+`C:\Users\oscar\AI WORKBENCH\asteroids`, or pick the next lab objective.
 
 ## Blockers
 - None.
