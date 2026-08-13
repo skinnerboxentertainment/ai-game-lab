@@ -5,6 +5,8 @@
  * provably deterministic so an agent (and a headless harness) can verify work.
  */
 import { seedParticles, stepParticle, simulate, TICK } from "../src/state/core.ts";
+import { createRng, nextRandom } from "../src/state/rng.ts";
+import type { RngState } from "../src/state/rng.ts";
 
 const BOUNDS = { width: 1280, height: 720 };
 let failures = 0;
@@ -51,6 +53,49 @@ check(
   "stepParticle is pure (inputs unchanged)",
   p.x === 0 && p.y === 0 && p.vx === -50 && p.vy === -50,
 );
+
+// 6. RNG state round-trips: resuming from a serialized mid-sequence state
+// (a plain JSON round-trip, standing in for a real save/load) continues
+// identically to never having paused.
+{
+  const uninterrupted: number[] = [];
+  let rng = createRng(42);
+  for (let i = 0; i < 10; i++) {
+    const [value, next] = nextRandom(rng);
+    uninterrupted.push(value);
+    rng = next;
+  }
+
+  const resumed: number[] = [];
+  let rngA = createRng(42);
+  for (let i = 0; i < 5; i++) {
+    const [value, next] = nextRandom(rngA);
+    resumed.push(value);
+    rngA = next;
+  }
+  let rngB: RngState = JSON.parse(JSON.stringify(rngA));
+  for (let i = 5; i < 10; i++) {
+    const [value, next] = nextRandom(rngB);
+    resumed.push(value);
+    rngB = next;
+  }
+
+  check(
+    "RNG state round-trips through JSON mid-sequence",
+    JSON.stringify(uninterrupted) === JSON.stringify(resumed),
+  );
+}
+
+// 7. RNG state is a plain value: nextRandom never mutates its input.
+{
+  const before = createRng(7);
+  const snapshot = JSON.stringify(before);
+  nextRandom(before);
+  check(
+    "nextRandom does not mutate its input state",
+    JSON.stringify(before) === snapshot,
+  );
+}
 
 if (failures > 0) {
   throw new Error(`${failures} determinism check(s) failed`);

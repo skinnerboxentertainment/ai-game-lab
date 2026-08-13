@@ -7,8 +7,7 @@
  *
  * Fixed timestep (TICK) means stepping is deterministic regardless of frame rate.
  */
-import { mulberry32, randRange } from "./rng.ts";
-import type { Rng } from "./rng.ts";
+import { createRng, nextRandom, nextRange } from "./rng.ts";
 
 export interface Particle {
   x: number;
@@ -31,16 +30,16 @@ export function seedParticles(
   count: number,
   bounds: SimBounds,
 ): Particle[] {
-  const rng: Rng = mulberry32(seed);
+  let rng = createRng(seed);
   const out: Particle[] = [];
   for (let i = 0; i < count; i++) {
-    out.push({
-      x: randRange(rng, 0, bounds.width),
-      y: randRange(rng, 0, bounds.height),
-      vx: randRange(rng, -45, 45),
-      vy: randRange(rng, -45, 45),
-      hue: rng(),
-    });
+    let x: number, y: number, vx: number, vy: number, hue: number;
+    [x, rng] = nextRange(rng, 0, bounds.width);
+    [y, rng] = nextRange(rng, 0, bounds.height);
+    [vx, rng] = nextRange(rng, -45, 45);
+    [vy, rng] = nextRange(rng, -45, 45);
+    [hue, rng] = nextRandom(rng);
+    out.push({ x, y, vx, vy, hue });
   }
   return out;
 }

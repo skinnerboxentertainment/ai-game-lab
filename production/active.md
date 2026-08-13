@@ -4,21 +4,23 @@
 Prove
 
 ## Current Objective
-ADR-0002 shipped and **Accepted**: self-contained `scripts/verify.mjs`, CI
-(lab + spawned games), `engines.node`. Built, independently audited twice
-(DeepSeek: a real spawned-game CI blocker + 4 hardening gaps; DeepSeek again:
-a real GitHub Actions sandbox failure + fix), and confirmed green on a real
-`ubuntu-latest` CI run.
+ADR-0003: upgrade the starter demo to actually demonstrate the serializable
+`GameState` + `(state, action, seededRng) -> newState` pattern the docs
+already claim. Three incremental slices, each independently gated.
 
 ## Active Packs
-- (none active)
+- state-authority: state/RNG/serialization is the entire point of this
+  changeset
 
 ## Open Decisions
 - (none blocking)
 
 ## Next Action
-This objective is closed. Resume the Asteroids game in
-`C:\Users\oscar\AI WORKBENCH\asteroids`, or pick the next lab objective.
+Slice 1 done and gated (green: test 24/24, typecheck, build, lint, verify
+7/7). Next: Slice 2 — wrap the particle array in a real `GameState`
+(`{ version, seed, rngState, tick, particles }`), add `toJSON()`/
+`fromJSON()`, and prove a mid-simulation serialize/deserialize round-trip
+is bit-identical to uninterrupted simulation.
 
 ## Blockers
 - None.

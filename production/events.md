@@ -112,3 +112,26 @@
     spawned games get a working gate (proven via a real `npm install` +
     `npm run check`), and GitHub Actions itself is green.
 
+## 2026-08-13 (continued)
+- **ADR-0003: serializable GameState + action-transition pattern for the
+  starter demo.** The lab's own demo (`ParticleGalaxy`) didn't demonstrate
+  the pattern its own `AGENTS.md`/`ARCHITECTURE.md` claim — no `GameState`
+  object (bare `Particle[]`), no actions, no input at all, and an RNG that
+  was a non-serializable stateful closure. Since `new-game.mjs` copies
+  `src/` verbatim, every future spawned game inherited that gap too.
+  Three incremental slices, each independently gated, per the ADR.
+  - **Slice 1 (this session): pure, serializable RNG.** Rewrote
+    `src/state/rng.ts`: stateful closure → plain `{ a: number }` state +
+    pure `nextRandom(state) -> [value, newState]` / `nextRange(...)`.
+    Updated `seedParticles` in `src/state/core.ts` (only caller) to thread
+    state through instead of mutating a closure. Same algorithm
+    (mulberry32), same output sequence for a given seed — this is a
+    representation change, not a behavior change.
+    - New tests: RNG state round-trips through a JSON serialize/deserialize
+      mid-sequence (resuming continues identically to never pausing);
+      `nextRandom` doesn't mutate its input.
+    - Gate green: test 24/24 (was 22), typecheck, build, lint, verify 7/7.
+  - Next: Slice 2 (`GameState` wrapper + `toJSON`/`fromJSON`, tested via
+    round-trip), then Slice 3 (one action + `scripts/verify.mjs`
+    extension).
+
