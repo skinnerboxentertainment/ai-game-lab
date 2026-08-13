@@ -9,7 +9,9 @@
 //
 // Checks: app booted (window.__demo), logical display is exactly 1280x720,
 // contain-scale math matches renderer.screen, seed applied, sim has ticked,
-// and the particle scene actually renders (CDP screenshot decoded in-page).
+// a dispatched click actually spawns a particle burst (SPAWN_BURST end-to-
+// end), and the particle scene actually renders (CDP screenshot decoded
+// in-page).
 //
 // Browser resolution: tries, in order, msedge / microsoft-edge-stable /
 // microsoft-edge / google-chrome-stable / google-chrome / chromium-browser /
@@ -333,6 +335,49 @@ async function runChecks(cdpBase, baseUrl) {
     }
     check("seed applied", b?.seed === SEED, `seed=${b?.seed}`);
     check("sim has ticked (fixed timestep running)", (b?.ticks ?? 0) > 0, `ticks=${b?.ticks}`);
+
+    // Click dispatch: proves SPAWN_BURST actually runs end-to-end through
+    // (state, action) -> newState in the live app, not just in unit tests.
+    // Each spawned particle becomes a sprite child of the scene container,
+    // so child count is an exact, deterministic proxy for particle count —
+    // no pixel-sampling flakiness needed for this one.
+    if (b?.scale) {
+      const clickX = Math.round(b.offsetX + b.scale * (1280 / 2));
+      const clickY = Math.round(b.offsetY + b.scale * (720 / 2));
+
+      const before = await cdp.send("Runtime.evaluate", {
+        expression: "window.__demo.scene.container.children.length",
+        returnByValue: true,
+      });
+      await cdp.send("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        x: clickX,
+        y: clickY,
+        button: "left",
+        clickCount: 1,
+      });
+      await cdp.send("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        x: clickX,
+        y: clickY,
+        button: "left",
+        clickCount: 1,
+      });
+      await new Promise((r) => setTimeout(r, 200));
+      const after = await cdp.send("Runtime.evaluate", {
+        expression: "window.__demo.scene.container.children.length",
+        returnByValue: true,
+      });
+
+      const beforeCount = before.result?.value ?? 0;
+      const afterCount = after.result?.value ?? 0;
+      // 20 == BURST_COUNT in src/scenes/ParticleGalaxy.ts — keep in sync.
+      check(
+        "click dispatches SPAWN_BURST (exactly BURST_COUNT=20 more sprites)",
+        afterCount === beforeCount + 20,
+        `before=${beforeCount} after=${afterCount}`,
+      );
+    }
 
     const shot = await cdp.send("Page.captureScreenshot", { format: "png" });
     const sample = await cdp.send("Runtime.evaluate", {

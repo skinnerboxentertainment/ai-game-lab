@@ -149,6 +149,55 @@ export function fromJSON(data: GameState): GameState {
   return toJSON(data);
 }
 
+/** Spawn one burst particle at a fixed point with random outward velocity —
+ * deliberately different generation logic from `spawnParticle` (random
+ * position, ambient velocity), so SPAWN_BURST is a genuinely distinct
+ * transition rather than a relabeled copy of the initial seeding. */
+function spawnBurstParticle(rng: RngState, x: number, y: number): [Particle, RngState] {
+  let vx: number, vy: number, hue: number;
+  [vx, rng] = nextRange(rng, -120, 120);
+  [vy, rng] = nextRange(rng, -120, 120);
+  [hue, rng] = nextRandom(rng);
+  return [{ x, y, vx, vy, hue }, rng];
+}
+
+export interface SpawnBurstAction {
+  type: "SPAWN_BURST";
+  x: number;
+  y: number;
+  count: number;
+}
+
+export type Action = SpawnBurstAction;
+
+/**
+ * Apply a discrete action to GameState. Pure, same contract as `stepState`:
+ * `state` is never mutated, a new GameState is returned.
+ *
+ * Docs describe this as `(state, action, seededRng) -> newState`; `rng`
+ * isn't a separate third parameter here because it already lives inside
+ * `state` (`state.rngState`) — that's what Slice 1/2 made possible, and
+ * passing it again separately would just restate something `state` already
+ * carries. This is the only place besides `createGameState` that consumes
+ * the RNG, and exactly why it had to become a serializable value: an action
+ * dispatched after a save/load must continue the same sequence, not restart
+ * it.
+ */
+export function applyAction(state: GameState, action: Action): GameState {
+  switch (action.type) {
+    case "SPAWN_BURST": {
+      let rng = state.rngState;
+      const spawned: Particle[] = [];
+      for (let i = 0; i < action.count; i++) {
+        let p: Particle;
+        [p, rng] = spawnBurstParticle(rng, action.x, action.y);
+        spawned.push(p);
+      }
+      return { ...state, rngState: rng, particles: [...state.particles, ...spawned] };
+    }
+  }
+}
+
 /** Simulate `ticks` fixed-timestep steps from a seed. Pure & headless. */
 export function simulate(
   seed: number,

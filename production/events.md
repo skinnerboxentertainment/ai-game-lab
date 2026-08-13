@@ -149,4 +149,35 @@
     - Gate green: test 26/26 (was 24), typecheck, build, lint, verify 7/7.
     - Next: Slice 3 — one `SPAWN_BURST` action, wired to a click in
       `ParticleGalaxy`, with `scripts/verify.mjs` extended to prove it.
+  - **Slice 3: one action, wired to a real click, verified end-to-end.**
+    Added `SpawnBurstAction`/`applyAction(state, action) -> newState` to
+    `src/state/core.ts` — the only place besides `createGameState` that
+    consumes the RNG, using a genuinely distinct spawn rule (fixed point,
+    fast outward velocity) rather than relabeling the ambient-spawn logic.
+    `applyAction` takes 2 args, not the docs' literal 3 (`state, action,
+    seededRng`) — `rng` already lives inside `state.rngState` since
+    Slice 1/2, so a separate third parameter would just restate it;
+    documented inline why.
+    - `ParticleGalaxy` now holds a `GameState` (via `createGameState`
+      instead of `seedParticles`) and dispatches `SPAWN_BURST` on click,
+      using Pixi's own event system (`eventMode`/`hitArea`/`on`) per
+      `pixijs-lab-pack.md`'s "no raw DOM listeners" rule — verified the
+      actual v8 API (`getLocalPosition`, `eventMode`, `hitArea`) against
+      the installed package's type defs before writing it, not from
+      memory. Per-frame continuous stepping stays ECS-owned (`stepAll`,
+      unchanged) — `state.particles` tracks spawn history, not live
+      position, an intentional, documented, minimal-footprint split rather
+      than migrating the whole render-driving mechanism.
+    - `scripts/verify.mjs` extended: dispatches a real CDP click at the
+      logical-stage center and asserts the scene's sprite count increased
+      by exactly `BURST_COUNT` — proof the whole chain (CDP → Pixi event
+      system → `applyAction` → new sprites) works in the live app, not
+      just in unit tests. Confirmed non-flaky across two runs.
+    - New tests: `applyAction` is pure, appends exactly `count` particles
+      at the click point, advances the RNG, and is deterministic
+      (same state + action -> identical result).
+    - Gate green: test 28/28 (was 26), typecheck, build, lint, verify 8/8
+      (including the new click-dispatch check, `before=140 after=160`).
+  - **ADR-0003 complete, locally.** Not yet pushed for a real CI
+    confirmation — that's the next step, same discipline as ADR-0002.
 

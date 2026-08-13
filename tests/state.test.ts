@@ -13,6 +13,7 @@ import {
   stepState,
   toJSON,
   fromJSON,
+  applyAction,
 } from "../src/state/core.ts";
 import { createRng, nextRandom } from "../src/state/rng.ts";
 import type { RngState } from "../src/state/rng.ts";
@@ -135,6 +136,50 @@ check(
   check(
     "stepState/toJSON do not mutate their input GameState",
     JSON.stringify(state) === snapshot,
+  );
+}
+
+// 10. applyAction(SPAWN_BURST) appends the right particles at the click
+// point, advances the RNG, and doesn't mutate its input.
+{
+  const before = createGameState(11, 5, BOUNDS);
+  const snapshot = JSON.stringify(before);
+  const after = applyAction(before, { type: "SPAWN_BURST", x: 640, y: 360, count: 4 });
+
+  check(
+    "applyAction does not mutate its input GameState",
+    JSON.stringify(before) === snapshot,
+  );
+  check(
+    "SPAWN_BURST appends exactly `count` particles",
+    after.particles.length === before.particles.length + 4,
+  );
+  const spawned = after.particles.slice(before.particles.length);
+  check(
+    "SPAWN_BURST particles spawn at the click point",
+    spawned.every((p) => p.x === 640 && p.y === 360),
+  );
+  check(
+    "SPAWN_BURST advances the RNG (not a no-op)",
+    JSON.stringify(after.rngState) !== JSON.stringify(before.rngState),
+  );
+}
+
+// 11. applyAction is deterministic: same input state + action -> identical
+// result (same evidence standard as every other transition in this file).
+{
+  const state = createGameState(2026, 8, BOUNDS);
+  const action: Parameters<typeof applyAction>[1] = {
+    type: "SPAWN_BURST",
+    x: 100,
+    y: 200,
+    count: 6,
+  };
+  const r1 = applyAction(state, action);
+  const r2 = applyAction(state, action);
+  check(
+    "applyAction deterministic (same state + action -> identical result)",
+    JSON.stringify(r1) === JSON.stringify(r2),
   );
 }
 
