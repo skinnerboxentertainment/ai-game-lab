@@ -38,6 +38,10 @@ export class ParticleGalaxy implements Disposable {
   private accumulator = 0;
   private tickCount = 0;
   private state: GameState;
+  /** Exposed so scripts/verify.mjs can read the real value off the live
+   * page instead of duplicating the number — a hardcoded copy in a second
+   * file is exactly the kind of thing that quietly drifts out of sync. */
+  readonly burstCount = BURST_COUNT;
 
   constructor(parent: Container, seed: number) {
     this.container = new Container({ label: "sceneLayer" });

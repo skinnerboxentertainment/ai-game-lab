@@ -312,6 +312,7 @@ async function runChecks(cdpBase, baseUrl) {
           offsetX: s.offsetX,
           offsetY: s.offsetY,
           ticks: d.scene ? d.scene.ticks : 0,
+          burstCount: d.scene ? d.scene.burstCount : 0,
           seed: d.seed ?? null,
           canvas: [d.app.canvas.width, d.app.canvas.height],
         };
@@ -371,10 +372,11 @@ async function runChecks(cdpBase, baseUrl) {
 
       const beforeCount = before.result?.value ?? 0;
       const afterCount = after.result?.value ?? 0;
-      // 20 == BURST_COUNT in src/scenes/ParticleGalaxy.ts — keep in sync.
+      // b.burstCount is read off the live page (ParticleGalaxy.burstCount),
+      // not duplicated here — no hardcoded number to drift out of sync.
       check(
-        "click dispatches SPAWN_BURST (exactly BURST_COUNT=20 more sprites)",
-        afterCount === beforeCount + 20,
+        `click dispatches SPAWN_BURST (exactly burstCount=${b.burstCount} more sprites)`,
+        afterCount === beforeCount + b.burstCount,
         `before=${beforeCount} after=${afterCount}`,
       );
     }
