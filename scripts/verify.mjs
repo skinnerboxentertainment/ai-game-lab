@@ -28,7 +28,7 @@
 // sampling) — never trust headless FPS/extract readings.
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, openSync, closeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createServer } from "vite";
@@ -48,6 +48,7 @@ function check(name, ok, detail) {
 let viteServer = null;
 let browserProc = null;
 let userDataDir = null;
+let stderrFd = null;
 
 try {
   let baseUrl;
@@ -78,11 +79,22 @@ try {
     }
 
     userDataDir = mkdtempSync(join(tmpdir(), "verify-cdp-"));
+    // Capture the browser's stderr to a file so a launch failure is
+    // diagnosable instead of a blind timeout (stdout/stderr are otherwise
+    // dropped on CI).
+    const stderrLog = join(userDataDir, "browser-stderr.log");
+    stderrFd = openSync(stderrLog, "w");
     browserProc = spawn(
       browserPath,
       [
         "--headless=new",
         "--disable-gpu",
+        // Required on CI/container kernels (e.g. Ubuntu 24.04 GitHub runners)
+        // where unprivileged user namespaces are restricted by AppArmor —
+        // Chromium's sandbox then fails at startup and the browser exits
+        // before DevTools opens. Safe here: throwaway profile, first-party
+        // localhost content only.
+        "--no-sandbox",
         "--disable-dev-shm-usage",
         "--enable-unsafe-swiftshader",
         "--no-first-run",
@@ -93,14 +105,20 @@ try {
       ],
       // detached on POSIX so killTree can signal the whole process group,
       // not just the direct child (Chromium forks GPU/renderer/zygote procs).
-      { stdio: "ignore", detached: process.platform !== "win32" },
+      { stdio: ["ignore", "ignore", stderrFd], detached: process.platform !== "win32" },
     );
     let browserSpawnError = null;
     browserProc.once("error", (err) => {
       browserSpawnError = err;
     });
 
-    const cdpPort = await waitForDevToolsPort(userDataDir, 10000, () => browserSpawnError);
+    const cdpPort = await waitForDevToolsPort(
+      userDataDir,
+      browserProc,
+      stderrLog,
+      20000,
+      () => browserSpawnError,
+    );
     cdpBase = `http://127.0.0.1:${cdpPort}`;
   }
 
@@ -109,6 +127,7 @@ try {
   check(`verify harness error: ${err.message}`, false);
 } finally {
   if (browserProc) await killTree(browserProc);
+  if (stderrFd !== null) closeSync(stderrFd);
   if (viteServer) await viteServer.close();
   // Windows can hold the profile dir open briefly after the process exits
   // (AV scan, delayed handle release) — retry instead of crashing on EBUSY.
@@ -163,19 +182,34 @@ function resolveBrowserBinary() {
   return fallbacks.find((p) => existsSync(p)) ?? null;
 }
 
-async function waitForDevToolsPort(dir, timeoutMs = 10000, getSpawnError = () => null) {
+async function waitForDevToolsPort(dir, proc, stderrLog, timeoutMs = 20000, getSpawnError = () => null) {
   const file = join(dir, "DevToolsActivePort");
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const spawnError = getSpawnError();
     if (spawnError) throw new Error(`browser failed to launch: ${spawnError.message}`);
+    if (proc.exitCode !== null || proc.signalCode !== null) {
+      throw new Error(
+        `browser exited early (code ${proc.exitCode ?? "signal"}${proc.signalCode ? ` ${proc.signalCode}` : ""})` +
+          ` before DevTools opened${stderrTail(stderrLog)}`,
+      );
+    }
     if (existsSync(file)) {
       const port = parseInt(readFileSync(file, "utf8").split(/\r?\n/)[0], 10);
       if (Number.isFinite(port) && port > 0) return port;
     }
     await new Promise((r) => setTimeout(r, 100));
   }
-  throw new Error("timed out waiting for the browser's DevTools port");
+  throw new Error(`timed out waiting for the browser's DevTools port${stderrTail(stderrLog)}`);
+}
+
+/** Last few lines of the browser's captured stderr, for diagnosing launch
+ * failures ("" when nothing was captured). */
+function stderrTail(logPath, maxLines = 12) {
+  if (!logPath || !existsSync(logPath)) return "";
+  const text = readFileSync(logPath, "utf8").trim();
+  if (!text) return "";
+  return ` — browser stderr: ${text.split(/\r?\n/).slice(-maxLines).join(" | ")}`;
 }
 
 /** Kill the browser and wait for it to actually exit before returning — the
